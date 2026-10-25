@@ -1,0 +1,281 @@
+// Converted from IHP SG13G2 PDK for Ngspice
+
+//******************************************************************************* 
+//*                                                                             * 
+//* Copyright 2023 IHP PDK Authors                                              *
+//*                                                                             *
+//* Licensed under the Apache License, Version 2.0 (the "License");             *
+//* you may not use this file except in compliance with the License.            *
+//* You may obtain a copy of the License at                                     *
+//*                                                                             *
+//*     https://www.apache.org/licenses/LICENSE-2.0                             *
+//*                                                                             *
+//* Unless required by applicable law or agreed to in writing, software         *
+//* distributed under the License is distributed on an "AS IS" BASIS,           *
+//* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.    *
+//* See the License for the specific language governing permissions and         *
+//* limitations under the License.                                              *
+//*                                                                             *
+//******************************************************************************* 
+
+//*******************************************************************************
+//* Interdigitated MoM capacitor (cap_cmomi): OSDI compact-model wrapper subckt.
+//* The OSDI object auto-loads via .spiceinit; this include makes the 2-terminal
+//* .subckt cap_cmomi reachable wherever the cap model chain is pulled (cornerCAP).
+//*******************************************************************************
+// .include cap_cmomi.lib
+//*******************************************************************************
+//* cap_cmomi - 2-terminal ngspice wrapper around the Verilog-A (OSDI) compact model
+//*
+//* Copyright 2026 IHP PDK Authors
+//* Licensed under the Apache License, Version 2.0 (the "License").
+//*
+//* Interdigitated metal-oxide-metal capacitor on the g2 thin-metal stack
+//* (Metal1..Metal5). Full RF equivalent circuit from the g2 characterisation;
+//* coefficients are the natively characterised
+//* g2 values by layer count N = mmax-mmin+1 (N=3,4,5). One exception: the two
+//* feed terms (feed='same' and feed='double') are fitted in-house on the cell as
+//* drawn, because the g2 characterisation used a feed structure this PCell does not
+//* draw; they carry no layer keying. See the Cfeed block in cap_cmomi.va.
+//*
+//* The Verilog-A device cap_cmomi is 3-terminal (PLUS, MINUS, SUB); SUB is the
+//* substrate reference for the oxide shunt. This subckt keeps the classic
+//* 2-terminal interface by tying SUB to global ground 0.
+//*
+//* Requires the OSDI object to be loaded first (done in libs.tech/ngspice/.spiceinit):
+//*   osdi $PDK_ROOT/$PDK/libs.tech/ngspice/osdi/cap_cmomi.osdi
+//* Build it with libs.tech/verilog-a/openvaf-compile-va.sh.
+//* Simulator scope: ngspice via OSDI (built with -D__NGSPICE__). Xyce / gnucap /
+//* qucs-s are not wired and would need a separate Verilog-A build per simulator.
+//*
+//* feed token: string 'none'|'same'|'double' -> numeric code (0|1|2) for the
+//* Verilog-A. w,l in metres; mmin/mmax metal indices (1=Metal1 .. 5=Metal5).
+//* m: parallel device multiplier (ngspice subckt multiplier). mm_ok: accepted for
+//* interface parity but a NO-OP -- cap_cmomi has no characterised mismatch model.
+//*******************************************************************************
+//* STATISTICAL / CORNER MODELING (known caveat, to address with silicon):
+//* cap_cmomi has NO characterised process-corner or mismatch variation yet. The
+//* Verilog-A density coefficients are the g2-derived NOMINAL values, so cap_cmomi
+//* returns the same nominal capacitance in every corner (typ/bcs/wcs) and in
+//* Monte-Carlo (no local mismatch). This is NOT a claim that the device is
+//* corner-stable; the spread is simply not modelled. Extracting it needs silicon
+//* matched-pair / array test structures (not in the current size-sweep campaign),
+//* deferred to a future test chip. Treat corner/MC results for cap_cmomi as nominal.
+//*******************************************************************************
+//* RF VALIDITY WINDOW (full fit-validity note in the Verilog-A header):
+//* the low-frequency capacitance is the trustworthy quantity across the drawn size
+//* range. The RF branches (series R/L, skin, substrate shunt) are lumped fits valid
+//* to ~50 GHz. For the DEFAULT feed=double, LARGE devices (l~60um, or ~30x30)
+//* self-resonate in-band (~30-47 GHz) against a two-sided SRF the g2 fit does
+//* not cover -- treat the default-feed SRF near/above those frequencies as an
+//* unvalidated prediction. feed=same/none stay capacitive well past 50 GHz.
+//*******************************************************************************
+parameters none=0 same=1 double=2
+
+subckt cap_cmomi(plus minus)
+parameters w=5e-6
+parameters l=5e-6
+parameters mmin=1
+parameters mmax=5
+parameters feed=double
+parameters subblock=0
+parameters mm_ok=1
+parameters m=1
+ncap (plus minus 0) cap_cmomi_mod (
+  w=w l=l mmin=mmin mmax=mmax feed=feed subblock=subblock $mfactor=m
+)
+model cap_cmomi_mod cap_cmomi 
+ends
+
+//*******************************************************************************
+//* Metal fringe MoM capacitor (cap_cmomf): the same arrangement. Low-frequency
+//* model only, no corner or mismatch spread; see the header of cap_cmomf.lib.
+//*******************************************************************************
+// .include cap_cmomf.lib
+//*******************************************************************************
+//* cap_cmomf - ngspice wrapper around the Verilog-A (OSDI) compact model
+//*             (metal fringe MoM capacitor on the g2 stack, Metal1..Metal5)
+//*
+//* Copyright 2026 IHP PDK Authors
+//* Licensed under the Apache License, Version 2.0 (the "License").
+//*
+//*******************************************************************************
+//* *** LOW-FREQUENCY MODEL ONLY -- NOT VALIDATED ON SILICON ***
+//* The capacitance density comes from the Magic device generator this device
+//* originates from (libs.tech/magic/ihp-sg13cmos5l-cap.tcl in the sibling PDK,
+//* contributed by R. Timothy Edwards), using the values it carries after its
+//* recalibration against a full 3D OpenEMS analysis.  It is simulation-derived,
+//* not foundry silicon data.  Treat the result as an engineering estimate.
+//* That generator stops at Metal4, so the Metal4 to Metal5 step is extrapolated
+//* and has no measurement behind it at all.
+//*******************************************************************************
+//*
+//* Metal fringe (finger) capacitor on the g2 thin-metal stack: every metal
+//* layer from mmin to mmax carries a comb of fingers whose orientation
+//* alternates from layer to layer.  It is the fringe-style sibling of cap_cmomi,
+//* not a replacement for it: the two have different geometry, different
+//* densities and, for now, very different model depth.
+//*
+//*   C = areacap(mmin, mmax) * w * l
+//*     areacap = base + (mmax - mmin) * 0.305   [fF/um^2]
+//*     base    = 0.372 fF/um^2 if mmin == 1 (Metal1 is the bottom plate)
+//*             = 0.305 fF/um^2 otherwise
+//*
+//* Unlike cap_cmomi this model is 2-terminal in the Verilog-A as well: there is
+//* no substrate node, because no substrate-coupling fit exists for this
+//* geometry.  It also has no series R/L and therefore no self-resonance, so it
+//* stays capacitive at every frequency.  RF results are optimistic; extract the
+//* layout if you need parasitics.  Full rationale in the Verilog-A header,
+//* libs.tech/verilog-a/cap_cmomf/cap_cmomf.va.
+//*
+//* Requires the OSDI object to be loaded first (done in libs.tech/ngspice/.spiceinit):
+//*   osdi $PDK_ROOT/$PDK/libs.tech/ngspice/osdi/cap_cmomf.osdi
+//* Build it with libs.tech/verilog-a/openvaf-compile-va.sh.
+//* Simulator scope: ngspice via OSDI (built with -D__NGSPICE__).  Xyce / gnucap /
+//* qucs-s are not wired and would need a separate Verilog-A build per simulator.
+//*
+//* w,l in metres; mmin/mmax metal indices (1=Metal1 .. 5=Metal5).
+//* m: parallel device multiplier (ngspice subckt multiplier).  mm_ok: accepted
+//* for interface parity with cap_cmomi but a NO-OP -- cap_cmomf has no
+//* characterised mismatch model.
+//*******************************************************************************
+//* STATISTICAL / CORNER MODELING (known caveat, to address with silicon):
+//* cap_cmomf has NO characterised process-corner or mismatch variation, so it
+//* returns the same nominal capacitance in every corner (typ/bcs/wcs) and in
+//* Monte-Carlo.  This is NOT a claim that the device is corner-stable; the
+//* spread is simply not modelled.
+//*******************************************************************************
+
+subckt cap_cmomf(plus minus)
+parameters w=5e-6
+parameters l=5e-6
+parameters mmin=1
+parameters mmax=5
+parameters subblock=0
+parameters mm_ok=1
+parameters m=1
+ncap (plus minus) cap_cmomf_mod (
+  w=w l=l mmin=mmin mmax=mmax subblock=subblock $mfactor=m
+)
+model cap_cmomf_mod cap_cmomf 
+ends
+
+//*******************************************************************************
+//* parasitics 
+//*******************************************************************************
+
+//* SiO2: only area cap., prozess tol. cap_cpara
+//* C value is taken from extraction routine
+
+subckt cparasitic(plus minus)
+parameters c=0
+parameters w=0
+parameters l=0
+parameters ic=1e10
+parameters tc1=0
+parameters tc2=0
+@if (ic>1e9)
+  c1 (plus minus) sg13g2_default_mod_c  c=c*cap_cpara tc1=tc1 tc2=tc2
+@else
+  c1 (plus minus) sg13g2_default_mod_c  c=c*cap_cpara tc1=tc1 tc2=tc2
+@end
+ends
+
+
+//*******************************************************************************
+//* cmim 
+//*******************************************************************************
+
+model cmim_core sp_capacitor ( 
+  tc1=3.6e-6 tc2=2e-9 tnom=27 cj=cap_carea cjsw=40e-18
+)
+
+//* subcircuit for cmim
+//* Note: top/bottom plate parasitic capacitance is included by parasiticC extraction!
+//* Note: top (Metal3) corresponds to PLUS pin
+//*
+subckt cap_cmim(plus minus)
+parameters m=1
+parameters l=7u
+parameters w=7u
+parameters mm_ok=0
+parameters sf=1e-6
+parameters ic=1e10
+r1 (plus 1) sg13g2_default_mod_r  r=55m $mfactor=m
+@if (ic>1e9)
+  c1 (1 minus) cmim_core  l=l/sf w=w/sf scale=1 $mfactor=m
+@else
+  c1 (1 minus) cmim_core  l=l/sf w=w/sf scale=1 $mfactor=m
+@end
+ends
+
+
+//*******************************************************************************
+//* rfcmim 
+//*******************************************************************************
+
+//* subcircuit for rfcmim
+//* Note: top plate (Metal3) corresponds to PLUS pin, bottom plate corresponds to MINUS pin, bn is substrate bulk node
+//* Note: valid parameter range for w and l: 7um to 75um
+//* Note: valid parameter range for wfeed: 1um to 30um but maximum wfeed = w-1.2um
+//*
+subckt cap_rfcmim(plus minus bn)
+parameters m=1
+parameters l=7u
+parameters w=7u
+parameters mm_ok=0
+parameters wfeed=2e-6
+
+parameters ic=1e10
+parameters sf=1e-6
+parameters cic0=1e-18
+
+parameters lplate_val=(0.353158*(l/sf)+0.485684*l/w)*1e-12
+parameters lfeed_val=(6.03468+0.0814268*(w/sf)-0.821243*log(wfeed/sf)/log(1.55))*1e-12
+parameters lskin_val=1.18545e-012+6.95462e-014*(l/sf)
+parameters cox_val=(0.48922+0.0965145*(w+l)/sf+0.00610947*(w*l)/(sf*sf)+0.017*(wfeed/sf)*5)*1e-15
+parameters csub_val=(50.1021+0.277881*(w+l)/sf+1.25023e-005*(w*l)/(sf*sf))*1e-15
+parameters rsub_val=610.132-1.11685*(w+l)/sf+0.00434371*(w*l)/(sf*sf)
+parameters rmim_val=0.0463973+0.00219577*l/w+0.961292/(wfeed/sf)+0.00307712*(l/sf)+0.000217076*(l/sf)*l/w
+parameters rskin_val=0.154618+0.00702016*(l/sf)
+
+//* add tiny element to allow passing an IC value
+@if (ic>1e9)
+  cic1 (plus bn) sg13g2_default_mod_c  c=cic0 $mfactor=m
+  cic2 (minus bn) sg13g2_default_mod_c  c=cic0 $mfactor=m
+@else
+  cic1 (plus bn) sg13g2_default_mod_c  c=cic0 $mfactor=m
+  cic2 (minus bn) sg13g2_default_mod_c  c=cic0 $mfactor=m
+@end
+
+//* --------- model subcircuit ------------------------------
+lskin (plus 2) sg13g2_default_mod_l  l=lskin_val $mfactor=m
+rskin (plus 2) sg13g2_default_mod_r  r=rskin_val $mfactor=m
+
+@if ((lplate_val+lfeed_val-lskin_val)>1e-18)
+  lmim (2 3) sg13g2_default_mod_l  l=(lplate_val+lfeed_val-lskin_val) $mfactor=m
+@else
+  lmim (2 3) sg13g2_default_mod_l  l=1e-18 $mfactor=m
+@end
+
+rmim (3 4) sg13g2_default_mod_r  r=rmim_val $mfactor=m
+cmim (4 5) cmim_core  l=l/sf w=w/sf scale=1 $mfactor=m
+cox (5 51) sg13g2_default_mod_c  c=cox_val $mfactor=m
+csub (51 bn) sg13g2_default_mod_c  c=csub_val $mfactor=m
+
+@if (rsub_val>10m)
+  rsub (51 bn) sg13g2_default_mod_r  r=rsub_val $mfactor=m
+@else
+  rsub (51 bn) sg13g2_default_mod_r  r=10m $mfactor=m
+@end
+
+@if (lfeed_val>1e-18)
+  lfeed (5 minus) sg13g2_default_mod_l  l=lfeed_val $mfactor=m
+@else
+  lfeed (5 minus) sg13g2_default_mod_l  l=1e-18 $mfactor=m
+@end
+
+//*avoid floating node for initial condition
+rdummy (5 bn) sg13g2_default_mod_r  r=1G $mfactor=m
+
+ends

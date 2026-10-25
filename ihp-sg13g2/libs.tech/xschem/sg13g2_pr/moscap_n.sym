@@ -18,6 +18,7 @@ G {}
 K {type=moscap_n
 lvs_format="C@name @pinlist @model w=@w l=@l"
 format="@spiceprefix@name @pinlist @model w=@w l=@l m=@m mm_ok=@mm_ok"
+spectre_format="@spiceprefix@name ( @pinlist ) @model w=@w l=@l m=@m mm_ok=@mm_ok"
 template="name=C1
 l=1.0u
 w=1.0u
