@@ -19,6 +19,7 @@ G {}
 K {type=tcleval([symtype])
 function3="0 1 & 2 |"
 format="@name @@X @@A1 @@A2 @@B1 @VDD @VSS @prefix\\\\a21o_1"
+spectre_format="@name ( @@X @@A1 @@A2 @@B1 @VDD @VSS ) @prefix\\\\a21o_1" 
 schematic="tcleval([hierarchy_config @symname])"
 template="name=x1 VDD=VDD VSS=VSS prefix=sg13g2_ "
 extra="VDD VSS prefix"

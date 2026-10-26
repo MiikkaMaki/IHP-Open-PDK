@@ -86,6 +86,7 @@ backend option offers 5 thin metal layers, two thick metal layers (2 and 3 μm t
     * LVS rules
 * MOS/HBT/Passive device models for ngspice/Xyce
 * xschem: primitive device symbols, settings and testbenches
+* VACASK: netlisting in xschem symbols, cornerfiles and simulation models
 * Qucs-S: primitive device symbols, settings and testbenches
 * Digital: stdcells
 * OpenEMS: tutorials, scripts, documentation
@@ -101,6 +102,8 @@ backend option offers 5 thin metal layers, two thick metal layers (2 and 3 μm t
 * Xyce
     * Download: https://xyce.sandia.gov/downloads/executables
     * Source: https://github.com/Xyce/Xyce
+* VACASK
+    * Source: https://codeberg.org/arpadbuermen/VACASK
 * xschem
     * Source: https://github.com/StefanSchippers/xschem
 * Qucs-S
