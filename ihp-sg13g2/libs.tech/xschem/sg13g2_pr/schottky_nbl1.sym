@@ -18,6 +18,7 @@ G {}
 K {type=diode
 lvs_format="tcleval(D@name @pinlist @model m=[ev \{ @Nx * @Ny \} ] )"
 format="@spiceprefix@name @pinlist @model Nx=@Nx Ny=@Ny"
+spectre_format="@spiceprefix@name ( @pinlist ) @model nx=@Nx ny=@Ny"
 template="name=D1
 model=schottky_nbl1
 Nx=1

@@ -16,6 +16,7 @@ v {xschem version=3.4.8RC file_version=1.3
 G {}
 K {type=tcleval([symtype])
 format="@name @@Q @@CLK @@D @@RESET_B @@SCD @@SCE @VDD @VSS @prefix\\\\sdfrbpq_2"
+spectre_format="@name ( @@Q @@CLK @@D @@RESET_B @@SCD @@SCE @VDD @VSS ) @prefix\\\\sdfrbpq_2" 
 schematic="tcleval([hierarchy_config @symname])"
 template="name=x1 VDD=VDD VSS=VSS prefix=sg13g2_ "
 extra="VDD VSS prefix"
