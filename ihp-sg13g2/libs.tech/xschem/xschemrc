@@ -582,3 +582,23 @@ proc hierarchy_config_io {symname} {
     set sch [file join $sch_dir "${cell}.sch"]
     return $sch
 }
+
+# VACASK support
+if {[info exists PDK_ROOT]} {
+  if {[info exists PDK]} {
+    if {[file exists $PDK_ROOT/$PDK/libs.tech/xschem/xschem-vacask]} {
+      source $PDK_ROOT/$PDK/libs.tech/xschem/xschem-vacask
+    }
+  }
+}
+
+# Show netlist
+# set netlist_show 1
+
+# Netlist type
+if {[info exists env(XSCHEM_NETLIST_TYPE)]} {
+  puts "Netlist mode: $::env(XSCHEM_NETLIST_TYPE)"
+  set netlist_type $::env(XSCHEM_NETLIST_TYPE)
+} else {
+  puts "Netlist mode: <default>"
+}
